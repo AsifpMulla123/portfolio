@@ -1,9 +1,16 @@
+/* ── Core imports ────────────────────────────────────────────────────────── */
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
+/* ── Dark mode variant ───────────────────────────────────────────────────── */
+/* next-themes adds class="dark" to <html>. This tells Tailwind's dark:       */
+/* utilities to activate when any ancestor (or the element itself) has .dark  */
 @custom-variant dark (&:is(.dark *));
 
+/* ── shadcn/ui token mapping — DO NOT TOUCH ─────────────────────────────── */
+/* These map shadcn's CSS variables to Tailwind utility classes.              */
+/* Editing these will break shadcn components.                                */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -46,8 +53,91 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* ── Portfolio custom tokens — added on top of shadcn ─────────────────── */
+  /* These sit inside the same @theme inline block so they generate           */
+  /* Tailwind utilities alongside shadcn's tokens.                            */
+  /* Usage: bg-portfolio-accent, text-portfolio-muted, shadow-card, etc.      */
+  /* Prefixed with "portfolio-" to avoid colliding with shadcn's own names    */
+  /* (shadcn already owns --color-accent, --color-primary, etc.)              */
+
+  /* Brand colors */
+  --color-portfolio-black: #0a0a0a;
+  --color-portfolio-offwhite: #f5f5f5;
+  --color-portfolio-accent: #2563eb;
+  --color-portfolio-accent-hover: #1d4ed8;
+  --color-portfolio-accent-light: #eff6ff;
+  --color-portfolio-success: #10b981;
+  --color-portfolio-surface: #f8fafc;
+  --color-portfolio-muted: #64748b;
+
+  /* Box shadows */
+  /* Usage: shadow-card, shadow-card-hover, shadow-blue */
+  --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --shadow-card-hover:
+    0 10px 25px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-blue: 0 0 0 3px rgb(37 99 235 / 0.2);
+
+  /* Custom fonts */
+  /* --font-sans is taken by shadcn (Inter), so we add heading + mono here.  */
+  /* Usage: font-heading, font-mono                                           */
+  --font-heading: "IBM Plex Sans", sans-serif;
+  --font-mono: "IBM Plex Mono", monospace;
+
+  /* Animations */
+  /* Keyframes are nested inside @theme so Tailwind emits them.              */
+  /* Usage: animate-fade-in, animate-slide-up, animate-float, animate-glow   */
+
+  --animate-fade-in: fade-in 0.5s ease-out forwards;
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  --animate-slide-up: slide-up 0.6s ease-out forwards;
+  @keyframes slide-up {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Gentle 8px float — decorative elements, hero illustration */
+  --animate-float: float 3s ease-in-out infinite;
+  @keyframes float {
+    0%,
+    100% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-8px);
+    }
+  }
+
+  /* Blue shadow pulse — used on primary CTA button */
+  --animate-glow: glow 2s ease-in-out infinite;
+  @keyframes glow {
+    0%,
+    100% {
+      box-shadow: 0 0 5px rgb(37 99 235 / 0.3);
+    }
+    50% {
+      box-shadow:
+        0 0 20px rgb(37 99 235 / 0.6),
+        0 0 40px rgb(37 99 235 / 0.3);
+    }
+  }
 }
 
+/* ── shadcn light mode tokens — DO NOT TOUCH ─────────────────────────────── */
 :root {
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
@@ -83,6 +173,7 @@
   --sidebar-ring: oklch(0.708 0 0);
 }
 
+/* ── shadcn dark mode tokens — DO NOT TOUCH ──────────────────────────────── */
 .dark {
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
@@ -117,14 +208,62 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+/* ── Base layer ───────────────────────────────────────────────────────────── */
 @layer base {
+  /* Restore border color default — Tailwind v4 changed it to currentColor    */
+  /* which breaks shadcn borders. This sets it back to the border token.      */
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    /* Smooth transition when next-themes toggles dark mode */
+    transition:
+      background-color 0.2s ease,
+      color 0.2s ease;
   }
+
   html {
     @apply font-sans;
+    scroll-behavior: smooth;
+    scrollbar-gutter: stable;
+  }
+
+  /* IBM Plex Sans for all headings */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-heading);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+
+  /* IBM Plex Mono for code elements */
+  code,
+  kbd,
+  pre,
+  samp {
+    font-family: var(--font-mono);
+  }
+
+  /* Consistent focus ring using portfolio accent blue */
+  :focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+  }
+
+  :focus:not(:focus-visible) {
+    outline: none;
+  }
+
+  main {
+    min-height: 100dvh;
   }
 }
