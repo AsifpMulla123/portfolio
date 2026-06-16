@@ -1,12 +1,8 @@
 import { NextResponse } from "next/server";
-import { successResponse } from "@/lib/utils/apiResponse";
 
 export async function POST() {
   try {
-    // const response = NextResponse.json(
-    //   successResponse("Logged out successfully.", null),
-    //   { status: 200 },
-    // );
+   
     const response = NextResponse.json(
       { success: true, message: "Logged out successfully.", data: null },
       { status: 200 },

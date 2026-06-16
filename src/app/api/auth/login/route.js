@@ -1,7 +1,7 @@
-import { NextResponse } from "next/server";
+import { errorResponse } from "@/lib/utils/apiResponse";
 import bcrypt from "bcryptjs";
 import { SignJWT } from "jose";
-import { successResponse, errorResponse } from "@/lib/utils/apiResponse";
+import { NextResponse } from "next/server";
 
 // WHY HTTPCOOKIE INSTEAD OF LOCALSTORAGE:
 // Storing a JWT in localStorage exposes it to any JavaScript running on the page,
@@ -45,12 +45,7 @@ export async function POST(request) {
       const minutesRemaining = Math.ceil(
         (record.lockedUntil - Date.now()) / 60000,
       );
-      // return NextResponse.json(
-      //   errorResponse(
-      //     `Too many failed attempts. Try again in ${minutesRemaining} minute(s).`,
-      //   ),
-      //   { status: 429 },
-      // );
+      
       return errorResponse(
         `Too many failed attempts. Try again in ${minutesRemaining} minute(s).`,
         429,
@@ -67,18 +62,14 @@ export async function POST(request) {
     const { password } = body;
 
     if (!password || typeof password !== "string") {
-      // return NextResponse.json(errorResponse("Password is required."), {
-      //   status: 400,
-      // });
+      
       return errorResponse("Password is required.", 400);
     }
 
     const adminPassword = process.env.ADMIN_PASSWORD;
     if (!adminPassword) {
       console.error("[Login] ADMIN_PASSWORD env var is not set.");
-      // return NextResponse.json(errorResponse("Server configuration error."), {
-      //   status: 500,
-      // });
+      
       return errorResponse("Server configuration error.", 500);
     }
 
@@ -93,12 +84,7 @@ export async function POST(request) {
       if (record.count >= MAX_ATTEMPTS) {
         record.lockedUntil = Date.now() + LOCK_DURATION_MS;
         record.count = 0; // reset so the counter starts fresh after lockout expires
-        // return NextResponse.json(
-        //   errorResponse(
-        //     "Too many failed attempts. Account locked for 15 minutes.",
-        //   ),
-        //   { status: 429 },
-        // );
+      
         return errorResponse(
           "Too many failed attempts. Account locked for 15 minutes.",
           429,
@@ -106,12 +92,7 @@ export async function POST(request) {
       }
 
       const attemptsLeft = MAX_ATTEMPTS - record.count;
-      // return NextResponse.json(
-      //   errorResponse(
-      //     `Incorrect password. ${attemptsLeft} attempt(s) remaining.`,
-      //   ),
-      //   { status: 401 },
-      // );
+      
       return errorResponse(
         `Incorrect password. ${attemptsLeft} attempt(s) remaining.`,
         401,
@@ -131,11 +112,6 @@ export async function POST(request) {
       .setExpirationTime("1d") // expires in 1 day
       .sign(secret);
 
-    // Build the success response
-    // const response = NextResponse.json(
-    //   successResponse("Login successful.", null),
-    //   { status: 200 },
-    // );
     const response = NextResponse.json(
       { success: true, message: "Login successful.", data: null },
       { status: 200 },
@@ -154,12 +130,6 @@ export async function POST(request) {
     return response;
   } catch (error) {
     console.error("[Login] Unexpected error:", error);
-    // return NextResponse.json(
-    //   errorResponse("Something went wrong. Please try again."),
-    //   {
-    //     status: 500,
-    //   },
-    // );
     return errorResponse("Something went wrong. Please try again.", 500);
   }
 }

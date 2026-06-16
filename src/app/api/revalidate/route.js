@@ -1,6 +1,5 @@
-import { NextResponse } from "next/server";
+import { errorResponse, successResponse } from "@/lib/utils/apiResponse";
 import { revalidatePath } from "next/cache";
-import { successResponse, errorResponse } from "@/lib/utils/apiResponse";
 
 // WHAT ON-DEMAND REVALIDATION DOES AND WHEN IT IS TRIGGERED:
 //
@@ -26,9 +25,7 @@ export async function POST(request) {
     try {
       body = await request.json();
     } catch {
-      // return NextResponse.json(errorResponse("Invalid request body."), {
-      //   status: 400,
-      // });
+      
       return errorResponse("Invalid request body.", 400);
     }
 
@@ -39,10 +36,7 @@ export async function POST(request) {
     // (middleware only runs on /admin/*). Instead we use a shared secret so
     // automated tools or CI pipelines can also trigger revalidation safely.
     if (!secret || secret !== process.env.REVALIDATION_SECRET) {
-      // return NextResponse.json(
-      //   errorResponse("Unauthorized. Invalid or missing revalidation secret."),
-      //   { status: 401 },
-      // );
+      
       return errorResponse(
         "Unauthorized. Invalid or missing revalidation secret.",
         401,
@@ -51,10 +45,7 @@ export async function POST(request) {
 
     // ── Validate Paths ────────────────────────────────────────────────────────
     if (!Array.isArray(paths) || paths.length === 0) {
-      // return NextResponse.json(
-      //   errorResponse("paths must be a non-empty array of route strings."),
-      //   { status: 400 },
-      // );
+      
       return errorResponse(
         "paths must be a non-empty array of route strings.",
         400,
@@ -66,12 +57,7 @@ export async function POST(request) {
       (p) => typeof p !== "string" || p.trim() === "" || !p.startsWith("/"),
     );
     if (invalidPaths.length > 0) {
-      // return NextResponse.json(
-      //   errorResponse(
-      //     `Invalid paths: ${invalidPaths.join(", ")}. Each path must start with /.`,
-      //   ),
-      //   { status: 400 },
-      // );
+     
       return errorResponse(
         `Invalid paths: ${invalidPaths.join(", ")}. Each path must start with /.`,
         400,
@@ -97,13 +83,7 @@ export async function POST(request) {
       }
     }
 
-    // return NextResponse.json(
-    //   successResponse(
-    //     `Successfully revalidated ${revalidated.length} path(s).`,
-    //     { revalidated },
-    //   ),
-    //   { status: 200 },
-    // );
+    
     return successResponse(
       { revalidated },
       `Successfully revalidated ${revalidated.length} path(s).`,
@@ -111,10 +91,7 @@ export async function POST(request) {
     );
   } catch (error) {
     console.error("[Revalidate] Unexpected error:", error);
-    // return NextResponse.json(
-    //   errorResponse("Something went wrong during revalidation."),
-    //   { status: 500 },
-    // );
+  
     return errorResponse("Something went wrong during revalidation.", 500);
   }
 }
