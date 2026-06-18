@@ -266,4 +266,35 @@
   main {
     min-height: 100dvh;
   }
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 5px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background-color: #2563eb;
+    border-radius: 9999px;
+  }
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #2563eb transparent;
+  }
+
+  /* Text selection */
+  ::selection {
+    background-color: #2563eb;
+    color: #ffffff;
+  }
+
+  /* Dot grid for hero section */
+  .dot-grid {
+    background-image: radial-gradient(#e2e8f0 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+  .dark .dot-grid {
+    background-image: radial-gradient(#1e293b 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
 }
