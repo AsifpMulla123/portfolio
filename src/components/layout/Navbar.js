@@ -8,7 +8,13 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { FiMenu, FiX, FiGithub, FiLinkedin, FiTwitter } from "react-icons/fi";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetTitle,
+  SheetDescription,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import ThemeToggle from "@/components/shared/ThemeToggle";
 import ScrollToTop from "@/components/layout/ScrollToTop";
 
@@ -157,6 +163,17 @@ export default function Navbar() {
                     side="right"
                     className="w-72 bg-white dark:bg-[#0A0A0A] border-[#E2E8F0] dark:border-[#1E293B] p-0"
                   >
+                    {/*
+                      Radix UI requires SheetTitle + SheetDescription to exist in
+                      the DOM for screen reader accessibility.
+                      We hide them visually since the Navbar logo already serves
+                      as the visible heading inside the sheet.
+                    */}
+                    <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
+                    <SheetDescription className="sr-only">
+                      Main navigation links for the portfolio site.
+                    </SheetDescription>
+
                     {/* Mobile sheet inner content */}
                     <div className="flex flex-col h-full px-6 py-8">
                       {/* Logo inside sheet */}
