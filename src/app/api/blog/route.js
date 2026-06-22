@@ -2,7 +2,7 @@ import connectDB from "@/lib/db/mongodb";
 import Blog from "@/lib/db/models/Blog";
 import { successResponse, errorResponse } from "@/lib/utils/apiResponse";
 import { withAdminAuth } from "@/lib/utils/withAdminAuth";
-import { blogSchema } from "@/lib/validations/blog";
+import { updateBlogSchema } from "@/lib/validations/blog";
 import readingTime from "reading-time";
 
 // Force static export — this page is rebuilt only when admin clicks PublishButton
@@ -37,7 +37,7 @@ export const POST = withAdminAuth(async (request) => {
     const body = await request.json();
 
     // Validate against blog schema
-    const result = blogSchema.safeParse(body);
+    const result = updateBlogSchema.safeParse(body);
     if (!result.success) {
       return errorResponse("Validation failed", 400);
     }

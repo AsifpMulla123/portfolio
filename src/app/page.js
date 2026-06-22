@@ -11,6 +11,8 @@ import Projects from "@/components/sections/Projects";
 import Experience from "@/components/sections/Experience";
 import Certifications from "@/components/sections/Certifications";
 import OpenSource from "@/components/sections/OpenSource";
+import WorkingStyle from "@/components/sections/WorkingStyle";
+import Blog from "@/components/sections/Blog";
 
 export const dynamic = "force-static";
 
@@ -24,6 +26,8 @@ export default function Home() {
       <Experience />
       <Certifications />
       <OpenSource />
+      <WorkingStyle />
+      <Blog />
       {/* More sections added daily */}
     </main>
   );
