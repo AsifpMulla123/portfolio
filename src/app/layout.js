@@ -7,6 +7,7 @@ import ClientOnlyComponents from "@/components/shared/ClientOnlyComponents";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { ThemeProvider } from "@/components/shared/ThemeProvider";
+import { Toaster } from "@/components/ui/sonner";
 
 // ─── Font Configuration ───────────────────────────────────────────────
 const ibmPlexSans = IBM_Plex_Sans({
@@ -130,6 +131,7 @@ export default function RootLayout({ children }) {
 
           {/* Footer */}
           <Footer />
+          <Toaster position="top-right" richColors closeButton />
         </ThemeProvider>
       </body>
     </html>

@@ -13,6 +13,8 @@ import Certifications from "@/components/sections/Certifications";
 import OpenSource from "@/components/sections/OpenSource";
 import WorkingStyle from "@/components/sections/WorkingStyle";
 import Blog from "@/components/sections/Blog";
+import Contact from "@/components/sections/Contact";
+import ConnectModal from "@/components/shared/ConnectModal";
 
 export const dynamic = "force-static";
 
@@ -28,6 +30,8 @@ export default function Home() {
       <OpenSource />
       <WorkingStyle />
       <Blog />
+      <Contact />
+      <ConnectModal />
       {/* More sections added daily */}
     </main>
   );

@@ -9,8 +9,8 @@ const cspDirectives = [
   "default-src 'self'",
   // Scripts: allow self + Vercel analytics in prod, plus eval in dev for HMR
   isDev
-    ? "script-src 'self' 'unsafe-eval' 'unsafe-inline'"
-    : "script-src 'self' 'unsafe-inline'",
+    ? "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://challenges.cloudflare.com"
+    : "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com",
   // Styles: unsafe-inline needed for Tailwind CSS + shadcn runtime injection
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   // Fonts: Google Fonts + self
@@ -18,9 +18,9 @@ const cspDirectives = [
   // Images: self + GitHub avatars (for open source section)
   "img-src 'self' data: https://avatars.githubusercontent.com",
   // API calls: only to self (no third-party fetch allowed from browser)
-  "connect-src 'self'",
+  "connect-src 'self' https://challenges.cloudflare.com",
   // No iframes from outside
-  "frame-src 'none'",
+  "frame-src https://challenges.cloudflare.com",
   // No plugins (Flash etc.)
   "object-src 'none'",
   // Base URI locked to self

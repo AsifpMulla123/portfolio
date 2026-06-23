@@ -32,6 +32,11 @@ export const contactSchema = z.object({
     .min(10, { message: "Message must be at least 10 characters." })
     .max(2000, { message: "Message must be 2000 characters or fewer." })
     .trim(),
+  // Honeypot — must be empty. Bots fill every field; real users never see this.
+  website: z.string().max(0, { message: "Bot detected." }).optional(),
+
+  // Turnstile token — set automatically when widget completes, never by user
+  cfToken: z.string().min(1, { message: "Please complete the verification." }),
 });
 
 // In a pure-JS project we cannot use z.infer<typeof contactSchema> (that is TypeScript).
