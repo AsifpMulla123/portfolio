@@ -73,7 +73,6 @@ export async function POST(request) {
         // Next.js will regenerate it on the very next request to that path.
         revalidatePath(path);
         revalidated.push(path);
-        console.log(`[Revalidate] Revalidated: ${path}`);
       } catch (pathError) {
         // Log individual failures but continue revalidating remaining paths
         console.error(

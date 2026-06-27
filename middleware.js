@@ -1,49 +1,46 @@
+// middleware.js — root of project (same level as package.json)
+//
+// Runs on the Edge BEFORE any page renders.
+// Protects all /admin routes except /admin/login.
+// Unauthenticated requests are redirected to /admin/login instantly.
+
 import { NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 
-// WHY JOSE INSTEAD OF JSONWEBTOKEN:
-// Next.js middleware runs on the Edge Runtime, which is a lightweight V8-based
-// environment that does NOT have access to Node.js built-ins (like crypto, fs, etc.).
-// jsonwebtoken depends on Node.js crypto under the hood, so it crashes in Edge Runtime.
-// jose is built specifically for Web Crypto API (available everywhere including Edge),
-// making it the correct choice for Next.js middleware JWT verification.
+export const config = {
+  // Run middleware on ALL /admin routes including /admin itself
+  matcher: ["/admin", "/admin/:path*"],
+};
 
 export async function middleware(request) {
   const { pathname } = request.nextUrl;
 
-  // Allow /admin/login through without auth check.
-  // If we protected login too, a logged-out user could never reach it.
+  // Allow login page through — no token needed
   if (pathname === "/admin/login") {
     return NextResponse.next();
   }
 
+  // All other /admin routes need a valid token
   const token = request.cookies.get("admin_token")?.value;
 
-  // No token at all → send to login
+  // No token → redirect to login
   if (!token) {
-    const loginUrl = new URL("/admin/login", request.url);
-    return NextResponse.redirect(loginUrl);
+    return NextResponse.redirect(new URL("/admin/login", request.url));
   }
 
   try {
-    // jose requires the secret as a Uint8Array, not a plain string
+    // JWT_SECRET is a plain string with no $ signs so it reads fine from env
     const secret = new TextEncoder().encode(process.env.JWT_SECRET);
-
-    // jwtVerify throws if the token is expired, tampered with, or invalid
     await jwtVerify(token, secret);
 
-    // Token is valid — let the request through
+    // Valid token — allow through to the protected page
     return NextResponse.next();
-  } catch (error) {
-    // Token exists but is invalid or expired → redirect to login
-    console.error("[Middleware] Invalid admin token:", error.message);
-    const loginUrl = new URL("/admin/login", request.url);
-    return NextResponse.redirect(loginUrl);
+  } catch {
+    // Expired or tampered token → clear cookie and redirect to login
+    const response = NextResponse.redirect(
+      new URL("/admin/login", request.url),
+    );
+    response.cookies.delete("admin_token");
+    return response;
   }
 }
-
-// Only run this middleware on /admin/* routes.
-// The :path* wildcard matches every sub-path under /admin.
-export const config = {
-  matcher: ["/admin/:path*"],
-};

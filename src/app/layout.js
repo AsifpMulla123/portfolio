@@ -1,11 +1,5 @@
-// Root layout — server component, no 'use client'
-// Wraps every page with fonts, metadata, theme, nav, footer, and lazy utilities
-
 import { IBM_Plex_Sans, Inter, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
-import ClientOnlyComponents from "@/components/shared/ClientOnlyComponents";
-import Navbar from "@/components/layout/Navbar";
-import Footer from "@/components/layout/Footer";
 import { ThemeProvider } from "@/components/shared/ThemeProvider";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -30,6 +24,7 @@ const ibmPlexMono = IBM_Plex_Mono({
   variable: "--font-ibm-plex-mono",
   display: "swap",
 });
+
 // ─── Site URL helper ─────────────────────────────────────────────────
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://asif.dev";
 
@@ -103,18 +98,34 @@ const jsonLd = {
   knowsAbout: ["React", "Node.js", "MongoDB", "Next.js", "AWS", "C++"],
 };
 
+// ─── Blocking theme script ────────────────────────────────────────────
+// Runs synchronously before paint to prevent dark mode flash.
+// Reads localStorage and adds 'dark' class to <html> immediately.
+const themeScript = `
+(function() {
+  try {
+    var saved = localStorage.getItem('portfolio-theme');
+    var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    var theme = saved ? saved : (prefersDark ? 'dark' : 'light');
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  } catch (e) {}
+})();
+`;
+
 // ─── Root Layout ──────────────────────────────────────────────────────
 export default function RootLayout({ children }) {
   return (
     <html
       lang="en"
-      // Start without 'dark' class; ThemeProvider adds it client-side
-      // suppressHydrationWarning prevents mismatch between SSR and client
       suppressHydrationWarning
       className={`${ibmPlexSans.variable} ${inter.variable} ${ibmPlexMono.variable}`}
     >
       <head>
-        {/* JSON-LD structured data for search engines */}
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
@@ -122,15 +133,9 @@ export default function RootLayout({ children }) {
       </head>
       <body className="font-sans antialiased bg-white dark:bg-[#0A0A0A] text-[#0A0A0A] dark:text-[#F5F5F5] transition-colors duration-300">
         <ThemeProvider>
-          <ClientOnlyComponents />
-          {/* Top navigation */}
-          <Navbar />
-
-          {/* Page content */}
-          <main>{children}</main>
-
-          {/* Footer */}
-          <Footer />
+          {/* No Navbar or Footer here — they live in (portfolio)/layout.js */}
+          {/* Admin pages get their own sidebar/header from admin/(protected)/layout.js */}
+          {children}
           <Toaster position="top-right" richColors closeButton />
         </ThemeProvider>
       </body>
