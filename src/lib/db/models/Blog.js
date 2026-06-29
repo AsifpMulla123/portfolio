@@ -70,9 +70,6 @@ const BlogSchema = new mongoose.Schema(
 
 // ─── Indexes ─────────────────────────────────────────────────────────────────
 
-// Fast lookup for /blog/[slug] route
-BlogSchema.index({ slug: 1 });
-
 // Main listing query: only published posts, newest first
 BlogSchema.index({ published: 1, publishedAt: -1 });
 

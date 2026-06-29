@@ -1,318 +1,327 @@
+"use client";
+
 // src/app/admin/(protected)/page.js
-// SERVER COMPONENT — queries MongoDB directly for live counts.
-// force-dynamic ensures the admin always sees fresh numbers.
+// Client component — uses SWR to fetch dashboard data from /api/analytics/dashboard.
+// Charts are lazy loaded via dynamic() so Recharts bundle doesn't block initial paint.
 
-import connectDB from "@/lib/db/mongodb";
-import Project from "@/lib/db/models/Project";
-import Skill from "@/lib/db/models/Skill";
-import Experience from "@/lib/db/models/Experience";
-import Blog from "@/lib/db/models/Blog";
-import Contact from "@/lib/db/models/Contact";
-import Link from "next/link";
+import { useState } from "react";
+import useSWR from "swr";
+import dynamic from "next/dynamic";
+import { Card } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
 import {
-  FiFolder,
-  FiCode,
-  FiBriefcase,
-  FiEdit,
-  FiMail,
-  FiClock,
-  FiArrowRight,
   FiEye,
-  FiFileText,
+  FiMail,
+  FiFolder,
+  FiBookOpen,
+  FiTrendingUp,
+  FiUsers,
+  FiRefreshCw,
 } from "react-icons/fi";
+import { format } from "date-fns";
 
-export const metadata = { title: "Dashboard" };
-export const dynamic = "force-dynamic";
+// ─── Lazy load charts — Recharts is heavy, only load when needed ──────────────
+const PageViewsLineChart = dynamic(
+  () =>
+    import("@/components/admin/AnalyticsChart").then(
+      (m) => m.PageViewsLineChart,
+    ),
+  { loading: () => <Skeleton className="h-72 w-full" />, ssr: false },
+);
 
-// ─── Data fetcher ────────────────────────────────────────────────────────────
-async function getDashboardData() {
-  await connectDB();
+const TopPagesBarChart = dynamic(
+  () =>
+    import("@/components/admin/AnalyticsChart").then((m) => m.TopPagesBarChart),
+  { loading: () => <Skeleton className="h-64 w-full" />, ssr: false },
+);
 
-  const [
-    totalProjects,
-    publishedProjects,
-    totalSkills,
-    totalExperience,
-    totalPosts,
-    publishedPosts,
-    draftPosts,
-    totalMessages,
-    unreadMessages,
-    recentMessages,
-    recentPosts,
-  ] = await Promise.all([
-    Project.countDocuments({ status: { $ne: "archived" } }),
-    Project.countDocuments({ status: "published" }),
-    Skill.countDocuments(),
-    Experience.countDocuments(),
-    Blog.countDocuments(),
-    Blog.countDocuments({ status: "published" }),
-    Blog.countDocuments({ status: "draft" }),
-    Contact.countDocuments(),
-    Contact.countDocuments({ read: false }),
-    Contact.find()
-      .sort({ createdAt: -1 })
-      .limit(5)
-      .select("name email subject createdAt read")
-      .lean(),
-    Blog.find()
-      .sort({ createdAt: -1 })
-      .limit(5)
-      .select("title status createdAt")
-      .lean(),
-  ]);
+const ContactsPieChart = dynamic(
+  () =>
+    import("@/components/admin/AnalyticsChart").then((m) => m.ContactsPieChart),
+  { loading: () => <Skeleton className="h-64 w-full" />, ssr: false },
+);
 
-  return {
-    projects: { total: totalProjects, published: publishedProjects },
-    skills: { total: totalSkills },
-    experience: { total: totalExperience },
-    blog: { total: totalPosts, published: publishedPosts, drafts: draftPosts },
-    messages: { total: totalMessages, unread: unreadMessages },
-    recentMessages,
-    recentPosts,
-  };
-}
-
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-function timeAgo(date) {
-  const seconds = Math.floor((Date.now() - new Date(date).getTime()) / 1000);
-  if (seconds < 60) return "just now";
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
-  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
-  if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
-  return new Date(date).toLocaleDateString("en-IN", {
-    day: "numeric",
-    month: "short",
-  });
-}
+// ─── SWR fetcher — unwraps the { success, message, data } envelope ────────────
+const fetcher = (url) =>
+  fetch(url)
+    .then((res) => res.json())
+    .then((d) => d.data);
 
 // ─── Stat card ────────────────────────────────────────────────────────────────
-function StatCard({ icon: Icon, label, value, sub, href, accent }) {
+function StatCard({ icon: Icon, label, sublabel, value, isLoading, accent }) {
   return (
-    <Link
-      href={href}
-      className="group bg-slate-900 border border-slate-800 rounded-xl p-5 flex flex-col gap-4 hover:border-slate-700 transition-all"
-    >
-      {/* Top row: icon + arrow */}
-      <div className="flex items-center justify-between">
+    <Card className="bg-slate-900 border-slate-800 rounded-2xl p-6">
+      <div className="flex items-start justify-between">
+        {/* Icon container */}
         <div
-          className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
+          className="rounded-xl p-2"
           style={{ backgroundColor: `${accent}18` }}
         >
-          <Icon size={17} style={{ color: accent }} />
+          <Icon size={18} style={{ color: accent }} />
         </div>
-        <FiArrowRight
-          size={14}
-          className="text-slate-700 group-hover:text-slate-500 group-hover:translate-x-0.5 transition-all"
-        />
       </div>
 
-      {/* Number */}
-      <div>
-        <p className="text-3xl font-bold text-white tabular-nums leading-none">
-          {value}
-        </p>
+      <div className="mt-4">
+        {/* Value — skeleton while loading */}
+        {isLoading ? (
+          <Skeleton className="h-9 w-16 mb-1" />
+        ) : (
+          <p className="text-3xl font-bold text-white tabular-nums leading-none">
+            {value ?? 0}
+          </p>
+        )}
         <p className="text-sm font-medium text-slate-400 mt-1">{label}</p>
-        {sub && <p className="text-xs text-slate-600 mt-0.5">{sub}</p>}
+        <p className="text-xs text-slate-600 mt-0.5">{sublabel}</p>
       </div>
-    </Link>
+    </Card>
+  );
+}
+
+// ─── Error card — shown when SWR fails ───────────────────────────────────────
+function ErrorCard({ onRetry }) {
+  return (
+    <Card className="bg-slate-900 border-slate-800 rounded-2xl p-8 text-center">
+      <p className="text-sm text-slate-400 mb-4">
+        Failed to load dashboard data.
+      </p>
+      <button
+        onClick={onRetry}
+        className="inline-flex items-center gap-2 text-sm text-[#2563EB] hover:underline"
+      >
+        <FiRefreshCw size={13} />
+        Retry
+      </button>
+    </Card>
   );
 }
 
 // ─── Dashboard page ───────────────────────────────────────────────────────────
-export default async function AdminDashboardPage() {
-  const data = await getDashboardData();
+export default function AdminDashboardPage() {
+  // Track read/unread toggle per contact row locally
+  // (a full toggle would need a PATCH call — this is a lightweight UI state)
+  const [readState, setReadState] = useState({});
 
+  const { data, isLoading, error, mutate } = useSWR(
+    "/api/analytics/dashboard?days=30",
+    fetcher,
+    {
+      // Refresh every 60 seconds so the admin sees fresh counts without reload
+      refreshInterval: 60000,
+    },
+  );
+
+  // ── Stat card definitions ──
   const stats = [
     {
-      icon: FiFolder,
-      label: "Projects",
-      value: data.projects.total,
-      sub: `${data.projects.published} published`,
-      href: "/admin/projects",
+      icon: FiEye,
+      label: "Page Views",
+      sublabel: "Last 30 days",
+      value: data?.totalPageViews,
       accent: "#2563EB",
     },
     {
-      icon: FiCode,
-      label: "Skills",
-      value: data.skills.total,
-      sub: "across all categories",
-      href: "/admin/skills",
-      accent: "#8B5CF6",
-    },
-    {
-      icon: FiBriefcase,
-      label: "Experience",
-      value: data.experience.total,
-      sub: data.experience.total === 1 ? "position" : "positions",
-      href: "/admin/experience",
-      accent: "#F59E0B",
-    },
-    {
-      icon: FiEdit,
-      label: "Blog Posts",
-      value: data.blog.total,
-      sub: `${data.blog.published} published · ${data.blog.drafts} drafts`,
-      href: "/admin/blog",
+      icon: FiMail,
+      label: "Messages Received",
+      sublabel: "All time",
+      value: data?.totalContacts,
       accent: "#10B981",
     },
     {
-      icon: FiMail,
-      label: "Messages",
-      value: data.messages.total,
-      sub:
-        data.messages.unread > 0
-          ? `${data.messages.unread} unread`
-          : "all read",
-      href: "/admin/analytics",
-      accent: "#F43F5E",
+      icon: FiFolder,
+      label: "Projects",
+      sublabel: "In portfolio",
+      value: data?.totalProjects,
+      accent: "#F59E0B",
+    },
+    {
+      icon: FiBookOpen,
+      label: "Blog Posts",
+      sublabel: "Published",
+      value: data?.totalBlogPosts,
+      // Purple is allowed here per spec — only place in the whole project
+      accent: "#8B5CF6",
     },
   ];
 
-  return (
-    <div className="max-w-5xl space-y-8">
-      {/* ── Page heading ── */}
-      <div>
-        <h1 className="text-xl font-bold text-white">Good to see you, Asif.</h1>
-        <p className="text-sm text-slate-500 mt-1">
-          Here&apos;s what&apos;s happening with your portfolio.
-        </p>
-      </div>
+  // ── Format contactsBySubject object into array for PieChart ──
+  // API returns { "Job Opportunity": 3, "Freelance": 1, ... }
+  // PieChart expects [{ name, value }, ...]
+  const contactsPieData = data?.contactsBySubject
+    ? Object.entries(data.contactsBySubject).map(([name, value]) => ({
+        name: name || "Other",
+        value,
+      }))
+    : [];
 
-      {/* ── Stat cards ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
+  return (
+    <div className="space-y-8">
+      {/* ── Header ── */}
+
+      {/* ── Error state ── */}
+      {error && !isLoading && <ErrorCard onRetry={() => mutate()} />}
+
+      {/* ── Stat cards: 2 cols mobile / 4 cols desktop ── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((stat) => (
-          <StatCard key={stat.label} {...stat} />
+          <StatCard key={stat.label} {...stat} isLoading={isLoading} />
         ))}
       </div>
 
-      {/* ── Activity grid ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Recent messages */}
-        <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-slate-800">
-            <div className="flex items-center gap-2">
-              <FiMail size={14} className="text-slate-500" />
-              <h2 className="text-sm font-semibold text-slate-200">
-                Recent Messages
-              </h2>
-            </div>
-            {data.messages.unread > 0 && (
-              <span className="text-[11px] font-semibold bg-red-950/60 text-red-400 border border-red-800/40 px-2 py-0.5 rounded-full">
-                {data.messages.unread} unread
-              </span>
-            )}
-          </div>
+      {/* ── Page Views line chart (full width) ── */}
+      <Card className="bg-slate-900 border-slate-800 rounded-2xl p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <FiTrendingUp size={15} className="text-slate-500" />
+          <h2 className="text-sm font-semibold text-slate-200">
+            Page Views — Last 30 Days
+          </h2>
+        </div>
+        <PageViewsLineChart data={data?.pageViewsByDay ?? []} />
+      </Card>
 
-          {data.recentMessages.length === 0 ? (
-            <div className="px-5 py-10 text-center">
+      {/* ── Two chart grid: Top Pages + Contact Breakdown ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Top pages */}
+        <Card className="bg-slate-900 border-slate-800 rounded-2xl p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <FiEye size={15} className="text-slate-500" />
+            <h2 className="text-sm font-semibold text-slate-200">Top Pages</h2>
+          </div>
+          <TopPagesBarChart data={data?.topPages ?? []} />
+        </Card>
+
+        {/* Contact breakdown */}
+        <Card className="bg-slate-900 border-slate-800 rounded-2xl p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <FiMail size={15} className="text-slate-500" />
+            <h2 className="text-sm font-semibold text-slate-200">
+              Inquiries by Type
+            </h2>
+          </div>
+          <ContactsPieChart data={contactsPieData} />
+        </Card>
+      </div>
+
+      {/* ── Recent contacts table ── */}
+      <Card className="bg-slate-900 border-slate-800 rounded-2xl overflow-hidden mb-12">
+        {/* Table header row */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800">
+          <div className="flex items-center gap-2">
+            <FiUsers size={15} className="text-slate-500" />
+            <h2 className="text-sm font-semibold text-slate-200">
+              Recent Messages
+            </h2>
+          </div>
+          <a
+            href="/admin/analytics"
+            className="text-xs text-[#2563EB] hover:underline"
+          >
+            View All →
+          </a>
+        </div>
+
+        {/* Loading skeletons */}
+        {isLoading && (
+          <div className="p-6 space-y-3">
+            {[...Array(5)].map((_, i) => (
+              <Skeleton key={i} className="h-10 w-full rounded-lg" />
+            ))}
+          </div>
+        )}
+
+        {/* Empty state */}
+        {!isLoading &&
+          (!data?.recentContacts || data.recentContacts.length === 0) && (
+            <div className="px-6 py-10 text-center">
               <FiMail size={22} className="text-slate-700 mx-auto mb-2" />
               <p className="text-sm text-slate-600">No messages yet</p>
             </div>
-          ) : (
-            <ul className="divide-y divide-slate-800">
-              {data.recentMessages.map((msg) => (
-                <li
-                  key={msg._id.toString()}
-                  className="px-5 py-3.5 flex items-start justify-between gap-3 hover:bg-slate-800/40 transition-colors"
-                >
-                  <div className="flex items-start gap-2.5 min-w-0">
-                    {/* Unread indicator */}
-                    <div
-                      className={`mt-1.5 w-1.5 h-1.5 rounded-full shrink-0 ${msg.read ? "bg-transparent" : "bg-[#2563EB]"}`}
-                    />
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-slate-200 truncate">
-                        {msg.name}
-                      </p>
-                      <p className="text-xs text-slate-500 truncate mt-0.5">
-                        {msg.subject || msg.email}
-                      </p>
-                    </div>
-                  </div>
-                  <span className="text-[11px] text-slate-600 shrink-0 flex items-center gap-1 mt-0.5 tabular-nums">
-                    <FiClock size={10} />
-                    {timeAgo(msg.createdAt)}
-                  </span>
-                </li>
-              ))}
-            </ul>
           )}
-        </div>
 
-        {/* Recent posts */}
-        <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
-          <div className="flex items-center gap-2 px-5 py-4 border-b border-slate-800">
-            <FiEdit size={14} className="text-slate-500" />
-            <h2 className="text-sm font-semibold text-slate-200">
-              Recent Posts
-            </h2>
-          </div>
+        {/* Table — only render when data is present */}
+        {!isLoading && data?.recentContacts?.length > 0 && (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-800">
+                  <th className="text-left text-xs font-medium text-slate-500 px-6 py-3">
+                    Name
+                  </th>
+                  <th className="text-left text-xs font-medium text-slate-500 px-4 py-3 hidden md:table-cell">
+                    Email
+                  </th>
+                  <th className="text-left text-xs font-medium text-slate-500 px-4 py-3">
+                    Subject
+                  </th>
+                  <th className="text-left text-xs font-medium text-slate-500 px-4 py-3 hidden lg:table-cell">
+                    Date
+                  </th>
+                  <th className="text-left text-xs font-medium text-slate-500 px-4 py-3">
+                    Status
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800">
+                {data.recentContacts.map((contact) => {
+                  // Use local readState override if admin toggled it this session,
+                  // otherwise fall back to the value from the API
+                  const isRead =
+                    readState[contact._id] !== undefined
+                      ? readState[contact._id]
+                      : contact.read;
 
-          {data.recentPosts.length === 0 ? (
-            <div className="px-5 py-10 text-center">
-              <FiFileText size={22} className="text-slate-700 mx-auto mb-2" />
-              <p className="text-sm text-slate-600">No posts yet</p>
-            </div>
-          ) : (
-            <ul className="divide-y divide-slate-800">
-              {data.recentPosts.map((post) => (
-                <li
-                  key={post._id.toString()}
-                  className="px-5 py-3.5 flex items-center justify-between gap-3 hover:bg-slate-800/40 transition-colors"
-                >
-                  <p className="text-sm font-medium text-slate-200 truncate">
-                    {post.title}
-                  </p>
-                  <div className="flex items-center gap-3 shrink-0">
-                    <span className="text-[11px] text-slate-600 flex items-center gap-1 tabular-nums">
-                      <FiClock size={10} />
-                      {timeAgo(post.createdAt)}
-                    </span>
-                    {/* Status badge */}
-                    <span
-                      className={`text-[11px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1 border ${
-                        post.status === "published"
-                          ? "bg-emerald-950/60 text-emerald-400 border-emerald-800/40"
-                          : "bg-slate-800 text-slate-500 border-slate-700"
+                  return (
+                    <tr
+                      key={contact._id}
+                      // Highlight unread rows with a subtle accent tint
+                      className={`transition-colors hover:bg-slate-800/50 ${
+                        !isRead ? "bg-[#2563EB]/5" : ""
                       }`}
                     >
-                      {post.status === "published" ? (
-                        <>
-                          <FiEye size={9} />
-                          Live
-                        </>
-                      ) : (
-                        <>
-                          <FiFileText size={9} />
-                          Draft
-                        </>
-                      )}
-                    </span>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </div>
-
-      {/* ── Getting started banner — only when portfolio is empty ── */}
-      {data.projects.total === 0 &&
-        data.blog.total === 0 &&
-        data.skills.total === 0 && (
-          <div className="bg-[#2563EB]/10 border border-[#2563EB]/20 rounded-xl px-5 py-4 mb-12">
-            <p className="text-sm font-semibold text-[#60A5FA] mb-1">
-              Getting started
-            </p>
-            <p className="text-sm text-slate-400 leading-relaxed">
-              Start by adding your skills, then projects, then experience. Once
-              ready, click{" "}
-              <strong className="text-slate-300">Publish to Live Site</strong>{" "}
-              in any section to push changes live instantly.
-            </p>
+                      <td className="px-6 py-3.5 font-medium text-slate-200 whitespace-nowrap">
+                        {contact.name}
+                      </td>
+                      <td className="px-4 py-3.5 text-slate-500 hidden md:table-cell truncate max-w-45">
+                        {contact.email}
+                      </td>
+                      <td className="px-4 py-3.5">
+                        {/* Subject as a colored badge */}
+                        <Badge
+                          variant="outline"
+                          className="text-[11px] border-slate-700 text-slate-400 bg-slate-800/50"
+                        >
+                          {contact.subject || "General"}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-3.5 text-slate-500 hidden lg:table-cell whitespace-nowrap">
+                        {format(new Date(contact.createdAt), "MMM d, yyyy")}
+                      </td>
+                      <td className="px-4 py-3.5">
+                        {/* Toggle read/unread — local UI state only */}
+                        <button
+                          onClick={() =>
+                            setReadState((prev) => ({
+                              ...prev,
+                              [contact._id]: !isRead,
+                            }))
+                          }
+                          className={`text-[11px] font-semibold px-2.5 py-1 rounded-full border transition-colors ${
+                            isRead
+                              ? "bg-slate-800 text-slate-500 border-slate-700 hover:border-slate-600"
+                              : "bg-[#2563EB]/10 text-[#60A5FA] border-[#2563EB]/30 hover:bg-[#2563EB]/20"
+                          }`}
+                        >
+                          {isRead ? "Read" : "Unread"}
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         )}
+      </Card>
     </div>
   );
 }

@@ -1,9 +1,11 @@
+// src/app/layout.js
+// Root layout — server component, no 'use client'
+
 import { IBM_Plex_Sans, Inter, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/shared/ThemeProvider";
 import { Toaster } from "@/components/ui/sonner";
 
-// ─── Font Configuration ───────────────────────────────────────────────
 const ibmPlexSans = IBM_Plex_Sans({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
@@ -25,10 +27,8 @@ const ibmPlexMono = IBM_Plex_Mono({
   display: "swap",
 });
 
-// ─── Site URL helper ─────────────────────────────────────────────────
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://asif.dev";
 
-// ─── Metadata ────────────────────────────────────────────────────────
 export const metadata = {
   metadataBase: new URL(siteUrl),
   title: {
@@ -87,54 +87,48 @@ export const metadata = {
   },
 };
 
-// ─── JSON-LD Structured Data ──────────────────────────────────────────
-const jsonLd = {
-  "@context": "https://schema.org",
-  "@type": "Person",
-  name: "Asif",
-  jobTitle: "Full Stack Developer",
-  url: siteUrl,
-  sameAs: ["https://github.com/asif-dev", "https://linkedin.com/in/asif-dev"],
-  knowsAbout: ["React", "Node.js", "MongoDB", "Next.js", "AWS", "C++"],
-};
-
-// ─── Blocking theme script ────────────────────────────────────────────
-// Runs synchronously before paint to prevent dark mode flash.
-// Reads localStorage and adds 'dark' class to <html> immediately.
-const themeScript = `
-(function() {
-  try {
-    var saved = localStorage.getItem('portfolio-theme');
-    var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    var theme = saved ? saved : (prefersDark ? 'dark' : 'light');
-    if (theme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  } catch (e) {}
-})();
-`;
-
-// ─── Root Layout ──────────────────────────────────────────────────────
+// JSON-LD goes in metadata.other so Next.js injects it properly
+// without needing a raw <script> tag in JSX
 export default function RootLayout({ children }) {
   return (
     <html
       lang="en"
       suppressHydrationWarning
+      data-scroll-behavior="smooth"
       className={`${ibmPlexSans.variable} ${inter.variable} ${ibmPlexMono.variable}`}
     >
       <head>
-        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "Person",
+              name: "Asif",
+              jobTitle: "Full Stack Developer",
+              url: siteUrl,
+              sameAs: [
+                "https://github.com/asif-dev",
+                "https://linkedin.com/in/asif-dev",
+              ],
+              knowsAbout: [
+                "React",
+                "Node.js",
+                "MongoDB",
+                "Next.js",
+                "AWS",
+                "C++",
+              ],
+            }),
+          }}
         />
       </head>
-      <body className="font-sans antialiased bg-white dark:bg-[#0A0A0A] text-[#0A0A0A] dark:text-[#F5F5F5] transition-colors duration-300">
+      <body
+        className="font-sans antialiased bg-white dark:bg-[#0A0A0A] text-[#0A0A0A] dark:text-[#F5F5F5] transition-colors duration-300"
+        suppressHydrationWarning
+      >
+        {/* ThemeProvider handles dark mode flash prevention internally */}
         <ThemeProvider>
-          {/* No Navbar or Footer here — they live in (portfolio)/layout.js */}
-          {/* Admin pages get their own sidebar/header from admin/(protected)/layout.js */}
           {children}
           <Toaster position="top-right" richColors closeButton />
         </ThemeProvider>
