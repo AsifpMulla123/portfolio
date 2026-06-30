@@ -4,10 +4,8 @@ import Project from "@/lib/db/models/Project";
 import { successResponse, errorResponse } from "@/lib/utils/apiResponse";
 import { withAdminAuth } from "@/lib/utils/withAdminAuth";
 
-// Force-static so this route is built once at deploy time.
 // It only rebuilds when the admin clicks the Publish button (on-demand revalidation).
 // This means zero DB calls on every visitor request — perfect for the free MongoDB tier.
-export const dynamic = "force-static";
 
 // ─── GET /api/projects ────────────────────────────────────────────────────────
 // Public. Returns all non-archived projects sorted by their display order.
